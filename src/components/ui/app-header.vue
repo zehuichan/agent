@@ -9,7 +9,7 @@
       </div>
       <a
         class="text-xs text-white/40 hover:text-white/70"
-        href="https://github.com"
+        href="https://github.com/zehuichan/agent"
         target="_blank"
         rel="noopener"
       >
