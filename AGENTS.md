@@ -51,6 +51,7 @@
 ## 3. 架构红线
 
 `src/agent/` 是**纯 TS 核心**：
+
 - 不 import `vue` / `pinia` / `@vueuse/*` / DOM API（除了 `fetch` / `AbortController` / `ReadableStream` / `TextDecoder` 这类 Web 标准）。
 - 可以在 Node 环境被单测。
 - 对外只暴露类型与纯函数/类；状态托管给 composables。
@@ -65,6 +66,7 @@
 ## 4. 代码风格（直觉式，非教条）
 
 ### TypeScript
+
 - `strict: true` + `noUncheckedIndexedAccess: true` + `exactOptionalPropertyTypes: true`。
 - 禁 `any`；用 `unknown` + 守卫或 `satisfies`。
 - **导出 API 标注返回类型；内部函数信推断**。
@@ -72,6 +74,7 @@
 - 宁可 `as const` 加字面量，也别到处 `as Foo`。
 
 ### Vue
+
 - `<script setup lang="ts">` 唯一形态。
 - Props/Emits 用泛型 `defineProps<T>()` / `defineEmits<{...}>()`，不搞 runtime 声明。
 - 模板里复杂表达式抽 `computed`。
@@ -79,6 +82,7 @@
 - 副作用优先 `watchEffect` / `useXxx`，别在 `onMounted` 里堆。
 
 ### 样式（Tailwind v4）
+
 - 配置只在 `src/styles/app.css` 的 `@theme { ... }` 里写，**不建** `tailwind.config.js`。
 - 入口 CSS 用 `@import "tailwindcss";`，Vite 里挂 `@tailwindcss/vite`。
 - 优先 Tailwind 原子类；`class-variance-authority` / `tailwind-variants` 之类按需引入（先问）。
@@ -86,11 +90,13 @@
 - `<style scoped>` 只在样式确实需要封装时用。
 
 ### 注释
+
 - 写**为什么**，不写**做了什么**。
 - 代码能讲清楚的别加注释。
 - 有 trade-off / 踩坑点 / 协议约束 → 必须写清。
 
 ### 命名
+
 - **所有源码文件一律 kebab-case**，包括 `.vue`：`app-header.vue` / `message-bubble.vue` / `use-chat.ts` / `settings.ts`。
   禁止 `AppHeader.vue` / `HomeView.vue` 这种 PascalCase 文件名。
 - **模板里组件一律 PascalCase**：`<AppHeader />`、`<MessageBubble />`。kebab-case（`<app-header />`）会被 lint 拦。
@@ -100,6 +106,7 @@
 - 路径别名 `@/` → `src/`。
 
 ### Re-exports / barrel
+
 每个"对外暴露"的目录放 `index.ts` 做聚合导出，消费方**优先**从 barrel 导入：
 
 ```ts
@@ -111,6 +118,7 @@ import { AppHeader } from '@/components/ui'
 ```
 
 硬约束：
+
 - 类型必须用 `export type { ... } from './x'`（`consistent-type-exports` 强制）。混写 `export { type Foo, bar }` 也禁。
 - Router 的懒加载（`() => import('@/views/home-view.vue')`）**不走 barrel**，保留直连以便 Vite 按路由做 code-splitting。
 - 别搞"反向依赖"：`agent/` 永远不能出现在 `components/` 的 barrel 里（会绕开 §3 的红线）。
@@ -122,20 +130,20 @@ import { AppHeader } from '@/components/ui'
 所有消息**贴 OpenAI Chat Completions**，便于后续多 Provider：
 
 ```ts
-type Role = 'system' | 'user' | 'assistant' | 'tool';
+type Role = 'system' | 'user' | 'assistant' | 'tool'
 
 interface ChatMessage {
-  role: Role;
-  content: string | null;
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
-  name?: string;
+  role: Role
+  content: string | null
+  tool_calls?: ToolCall[]
+  tool_call_id?: string
+  name?: string
 }
 
 interface ToolCall {
-  id: string;
-  type: 'function';
-  function: { name: string; arguments: string }; // arguments 是 JSON 字符串，保留原样
+  id: string
+  type: 'function'
+  function: { name: string; arguments: string } // arguments 是 JSON 字符串，保留原样
 }
 ```
 
@@ -143,14 +151,15 @@ interface ToolCall {
 
 ```ts
 interface Tool<I = unknown, O = unknown> {
-  name: string;
-  description: string;
-  parameters: JSONSchema;              // 给 LLM
-  execute(input: I, ctx: ToolContext): Promise<O>;
+  name: string
+  description: string
+  parameters: JSONSchema // 给 LLM
+  execute(input: I, ctx: ToolContext): Promise<O>
 }
 ```
 
 约束：
+
 - `execute` 不抛未捕获异常；失败返回 `{ ok: false, error }` 结构。
 - 入参必须先按 `parameters` 校验。
 - 不碰 DOM；需要 UI 反馈走 `ctx.emit(event)` 或 store。
@@ -167,6 +176,7 @@ interface Tool<I = unknown, O = unknown> {
 ## 6. 依赖策略
 
 加依赖前自问三题：
+
 1. 能用标准 Web API 做吗？
 2. 能用 <50 行写个最小实现吗？
 3. 这个库体积/维护状态过关吗？

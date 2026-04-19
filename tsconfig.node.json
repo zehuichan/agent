@@ -20,9 +20,5 @@
 
     "types": ["node"]
   },
-  "include": [
-    "vite.config.ts",
-    "eslint.config.ts",
-    "prettier.config.js"
-  ]
+  "include": ["vite.config.ts", "eslint.config.ts", "prettier.config.js"]
 }

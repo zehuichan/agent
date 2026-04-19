@@ -27,8 +27,10 @@ function dotClass(status: 'done' | 'next' | 'todo'): string {
       <h1 class="text-3xl font-bold tracking-tight">在浏览器里手撕一个 AI Agent</h1>
       <p class="mt-3 text-white/60 leading-relaxed">
         不套壳框架（LangChain / Vercel AI SDK），核心只靠
-        <code class="text-accent">fetch</code> +
-        <code class="text-accent">ReadableStream</code> + 类型。
+        <code class="text-accent">fetch</code>
+        +
+        <code class="text-accent">ReadableStream</code>
+        + 类型。
       </p>
     </div>
 
@@ -64,7 +66,11 @@ function dotClass(status: 'done' | 'next' | 'todo'): string {
         </div>
       </dl>
       <p class="mt-4 text-xs text-white/40">
-        复制 <code>.env.example</code> 为 <code>.env.local</code> 并填入。
+        复制
+        <code>.env.example</code>
+        为
+        <code>.env.local</code>
+        并填入。
       </p>
     </div>
   </section>

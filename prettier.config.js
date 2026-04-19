@@ -7,4 +7,4 @@ export default {
   arrowParens: 'always',
   vueIndentScriptAndStyle: false,
   htmlWhitespaceSensitivity: 'ignore',
-};
+}

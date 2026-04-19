@@ -6,11 +6,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const apiKey = ref<string>(import.meta.env.VITE_LLM_API_KEY ?? '')
   const model = ref<string>(import.meta.env.VITE_LLM_MODEL ?? '')
 
-  function setCredentials(patch: {
-    baseUrl?: string
-    apiKey?: string
-    model?: string
-  }): void {
+  function setCredentials(patch: { baseUrl?: string; apiKey?: string; model?: string }): void {
     if (patch.baseUrl !== undefined) baseUrl.value = patch.baseUrl
     if (patch.apiKey !== undefined) apiKey.value = patch.apiKey
     if (patch.model !== undefined) model.value = patch.model
