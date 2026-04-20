@@ -117,6 +117,7 @@ pnpm dev
 - pnpm only；提交走 Conventional Commits。
 - `strict: true` + `noUncheckedIndexedAccess: true` + `exactOptionalPropertyTypes: true`，禁 `any`（用 `unknown` + 守卫）。
 - 公共导出函数写返回类型；内部闭包信 TS 推断，别过度标注。
+- **函数精简明了、贴合语义场景**：一个函数只做一件事，签名即文档；超过 ~40 行或嵌套 >3 层就拆，命名用业务动词短语（`parseSseChunk` 而非 `handleData`）。
 - **文件名一律 kebab-case**（含 `.vue`）：`app-header.vue` / `chat-input.vue` / `use-chat.ts` / `settings.ts`。
 - **模板里组件名一律 PascalCase**：`<AppHeader />` / `<MessageBubble />`，由 `vue/component-name-in-template-casing` 强制。
 - **支持 barrel re-exports**：每个"对外暴露"的目录放 `index.ts` 聚合导出；类型必须用 `export type { ... }`（由 `consistent-type-exports` 强制），保证 `isolatedModules` 下安全。
