@@ -1,20 +1,23 @@
 # Agent
 
-可部署的 Agent 后端。本文件落地 **三套对照目录**、本仓骨架、以及骨架上的 **两个方向**（V 垂直细分领域 / G 通用），用来定骨架，不写业务实现。
+可部署的 Agent 后端。本文件落地 **四套对照目录**、本仓骨架、以及骨架上的 **两个方向**（V 垂直细分领域 / G 通用），用来定骨架，不写业务实现。
 
-| 套    | 名称                 | 命题                             |
-| ----- | -------------------- | -------------------------------- |
-| **A** | 队列服务型           | Agent 是常驻服务；任务行是消息   |
-| **B** | 传统 SaaS 外挂聊天框 | 业务系统是产品；聊天是侧栏功能   |
-| **C** | 分层库 / harness     | Agent 是库；产品是装配它的那个包 |
+| 套    | 名称                 | 命题                                   |
+| ----- | -------------------- | -------------------------------------- |
+| **A** | 队列服务型           | Agent 是常驻服务；任务行是消息         |
+| **B** | 传统 SaaS 外挂聊天框 | 业务系统是产品；聊天是侧栏功能         |
+| **C** | 分层库 / harness     | Agent 是库；产品是装配它的那个包       |
+| **D** | 全插件 harness       | 一切都是插件，loop 也是；产品是一份配置 |
 
-本仓走 **C 的分层 + A 的队列层**。B 只作反面参考，避免把 loop 塞进 CRUD 路由。方向未定：V 和 G 各给一套完整架构，选一个。
+本仓走 **C 的分层 + A 的队列层**。D 借两条规则（可插点三角色、模型可见 ⟺ 已记录），不借框架。B 只作反面参考，避免把 loop 塞进 CRUD 路由。方向未定：V 和 G 各给一套完整架构，选一个。
+
+C、D 的参考仓有本地 checkout：`D:\sourcecode\pi`、`D:\sourcecode\deepseek-harness`。这两节的目录可以逐行对照，A、B 是归纳出来的骨架。
 
 ---
 
 ## 怎么读
 
-先看 A / B / C 的差异，再看「本仓骨架」怎么把 A 的队列装进 C 的分层，最后在 V / G 两个方向里选一个——它们共用骨架，分歧在哪些包是产品、P0 先做哪半。
+先看 A / B / C / D 的差异，再看「本仓骨架」怎么把 A 的队列装进 C 的分层，最后在 V / G 两个方向里选一个——它们共用骨架，分歧在哪些包是产品、P0 先做哪半。
 
 ```text
 A：人 / 别的系统 → API（只写任务行）→ 任务表 ←认领← Agent 进程（唯一智能）
@@ -24,9 +27,12 @@ B：人 → Web CRUD → API（领域逻辑 + 顺手调模型）
 
 C：宿主（CLI / 服务 / 别人的产品）→ 装配层 → agent 库
                                      ↘ server ←帧协议→ client（可断、可重连）
+
+D：profile（有序 patch 层）→ 插件树 → 一切皆 ctx.<seam>，loop 也是插件
+                                    ↘ webhook / schedule 直接开 session，不落任务行
 ```
 
-三者不是好坏排序。A 回答「没人看着的时候谁在干活」，C 回答「智能怎么被复用和嵌入」，B 两个都没回答。
+四者不是好坏排序。A 回答「没人看着的时候谁在干活」，C 回答「智能怎么被复用和嵌入」，D 回答「智能的每一块怎么被整个替换」，B 三个都没回答。
 
 贯穿全文的两个词：
 
@@ -171,7 +177,7 @@ packages/ai/                       # 后来抽出的 SDK 封装，loop 仍在请
 
 ## C — 分层库 / harness 目录
 
-参考系：[earendil-works/pi](https://github.com/earendil-works/pi)。A、B 的目录是归纳出来的骨架；C 直接对照 pi 的实际目录，可以逐行读。
+参考系：[earendil-works/pi](https://github.com/earendil-works/pi)。目录直接对照 pi 的实际结构，可以逐行读。
 
 ### 形态
 
@@ -259,29 +265,161 @@ pi/
 
 ---
 
+## D — 全插件 harness 目录
+
+参考系：[deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）。框架是 [Cordis](https://github.com/cordiverse/cordis)：插件向共享 `ctx` 贡献服务、类型化事件和可撤销的副作用。50 个包组、249 个包，全部 `@deepseek-ai/dsh-*`。
+
+### 形态
+
+**没有特权 core。** 模型适配器、tool 注册表、session log、agent loop 本身都是插件，都能从配置替换。产品不是「带 `bin` 的包」，是一份叠加出来的配置（profile）：`dsh --profile web --dump-config` 打印出来的每一行都能被上一层 patch 替换。
+
+```text
+profile（bundle patch 按序叠加 → profile 自己的 patch → home 级 → --patch）
+  → Cordis 插件树 → ctx.<seam>：Service Definition / Provider / Consumer
+                  ↘ core/agent-loop 也只是树上一个插件，可换
+
+宿主：dsh web（浏览器 GUI）/ headless（一次性）/ sdk（JSON-RPC stdio）/ acp
+```
+
+C 把「谁来常驻」交给 `server` / `client` 两个包；D 把它交给 profile：同一棵树，换一层 patch 就从浏览器 GUI 变成 stdio server。
+
+### 目录
+
+```text
+deepseek-harness/
+├── AGENTS.md                       # 开发纪律；packages/ 和部分组下再各有一份；每包有固定章节的 README
+├── pnpm-workspace.yaml             # vendor/*  packages/*/*  apps/*  native/  python/
+├── vendor/                         # 钉版本的 Cordis 源码（框架本体）
+│
+├── packages/<group>/<pkg>/
+│   ├── core/                       # 脊柱：session / system-prompt / tools / agent / agent-loop / scope
+│   │   ├── agent/                  #   Agent 接口 + 注册表 + agent/* 事件（ctx.agents）
+│   │   └── agent-loop/             #   默认 loop 驱动（ctx.agentLoop）；扩展不许依赖它
+│   ├── llm/                        # ctx.llm 契约 + llm-deepseek / llm-pi-ai（← 依赖 pi 的 ai 包）
+│   ├── session/                    # session-persistence 契约 + jsonl 后端；projection / title / telemetry
+│   ├── session-query/              # 读侧：sqlite 全文索引。不是写后端
+│   │
+│   ├── shell/                      # 每个能力都是三件套：
+│   │   ├── shell/                  #   Service Definition（抽象类，ctx.shell）
+│   │   ├── bash-local/  bash-sandbox/  pwsh-local/   # Providers
+│   │   └── tool-bash/              #   Consumer（模型可见的 tool）
+│   ├── subprocess/  fs/  terminal/  sandbox/  lsp/  web/  skill/  compaction/  subagent/   # 同上
+│   ├── hooks/  mcp/  context/      # Claude Code / Codex hook 桥；MCP client；请求上下文
+│   │
+│   ├── webhook/                    # 外部事件 → 直接开 session；fire-and-forget
+│   ├── schedule/                   # 会话内定时提醒；会话必须活着
+│   ├── jobs/                       # 会话内后台任务注册表（bash 后台、subagent）
+│   ├── goal/                       # 同会话持久目标 + 轮次上限
+│   ├── workflow/                   # worker-thread 脚本引擎；workflow / ralph tool
+│   │
+│   ├── interaction/                # approval / ask-user / commands / permission-presets
+│   ├── sdk/                        # JSON-RPC over stdio：protocol / client / server
+│   ├── acp/                        # Agent Client Protocol server
+│   ├── api/  host/  client/        # Web GUI：RPC 网关 / HTTP 宿主 / 浏览器端 ui-* 插件
+│   ├── typert/                     # 类型图生成 + 运行时注册表；RPC 的类型来源
+│   │
+│   ├── bundle/                     # ★ 产品 = patch 层：base / web-app / headless / sdk-app / sdk-minimal / acp-app
+│   ├── boot/  preset/  settings/  credentials/  storage/  workspace/  identity/
+│   ├── guard/  spill/  attachment/  todo/  plan/  feedback/  extensions/
+│   └── test-support/  runtime-diagnostics/  util/  experimental/  e2b/
+│
+├── apps/
+│   ├── cli/                        # 唯一 bin：dsh --profile <name>；config/examples/ 放可选 overlay
+│   └── web/                        # Vite 前端
+├── python/                         # Python SDK；同一份 JSON-RPC 协议；wheel 里打包 dsh 本体
+├── native/landlock-run/            # Linux Landlock 沙箱启动器
+├── snapshots/                      # 无 key 的录制会话回放，当门禁
+├── docs/                           # architecture / subsystems/* / 生成目录：capability-seams、tool-catalog、config-catalog
+└── .agents/notes/                  # 每个非平凡改动一篇决策记录
+```
+
+### 层 → 目录
+
+| 层     | 落点                                                             | 不做什么                                             |
+| ------ | ---------------------------------------------------------------- | ---------------------------------------------------- |
+| 框架   | `vendor/`（Cordis）                                              | 不含业务；钉版本                                     |
+| 契约   | 每个 seam 的 Service Definition 包（`shell/shell` `fs/fs` `llm/llm`） | 不含实现；是抽象类或注册表类，不是 `interface`   |
+| 供应商 | `llm/llm-deepseek` `llm/llm-pi-ai`                               | 不知道 loop 存在                                     |
+| 编排   | `core/agent-loop`                                                | 可换；扩展只依赖 `core/agent` 的事件和服务           |
+| 工具   | 各 seam 的 `tool-*` 包                                           | 只消费 seam；不自己 spawn、不自己读盘                |
+| 状态   | `core/session` + `session/session-persistence(-jsonl)`           | append-only；进模型的必须能从 log 重建               |
+| 传输   | `sdk/*` `acp/` `api/` `host/`                                    | 不含业务                                             |
+| 产品   | `bundle/*` + `apps/cli`                                          | bundle 只是 patch 层；`apps/cli` 是唯一 bin          |
+| 质量   | `snapshots/` + 每包 invariant + 生成文档新鲜度门禁               | 不靠肉眼；覆盖率门禁 100%                            |
+
+### 三个关键设计
+
+**可插点是三角色，缺一个不算。** Service Definition（`ctx.<key>` 的抽象类）/ Service Provider / Consumer。`shell/shell` 定义 → `bash-local` / `bash-sandbox` / `pwsh-local` 实现 → `tool-bash` 消费；换沙箱不改 tool。fs 与 subprocess 共用一个执行世界，指到远端沙箱（`e2b/`）时 bash / PTY / LSP 一起过去，不需要各 fork 一份。
+
+**事件分三域，且「模型可见 ⟺ 已记录」。** session 事件（durable，落 log）/ agent 事件（live，`agent/pre-step` 等 waterfall 可拦截改写）/ capability 事件（`fs/*` `tools/*`，不 import loop）。硬约束：任何进入模型请求的东西都必须能从 session log 重建，新增一种模型可见输入 = 新增一种 session 事件；有运行时 invariant 守着。
+
+**产品是配置，不是包。** profile = 按 `dsh.profile.bundles` 顺序叠加各 bundle 的 `cordis.patch.yml`，再叠 profile 自己的、home 级的、`--patch` 的。`web` / `headless` / `sdk` / `sdk-minimal` / `acp` 五个 profile 共用 `bundle/base`。patch 按 id 替换整行配置，所以换 loop 和换模型是同一种操作。
+
+### D 怎么回答「没人看着」
+
+四个包沾边，都停在**认领**之前：
+
+| 包         | 做什么                                                                                       | 不做什么                                               |
+| ---------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `webhook`  | 验签的外部事件 → 可信规则 → 直接开一个 Workspace session，投第一条 user message；GitHub 适配器 202 即返回 | 无队列、无重试、无去重、无执行状态；重复投递就重复开会话 |
+| `schedule` | 会话内 `after` / `at` / `every`（≥ 5 分钟）提醒，作为后续 turn 回到原会话；落 `schedule/change` 事件可重放 | 会话必须活着；没有冷会话调度器；at-least-once           |
+| `jobs`     | 会话内后台任务注册表（bash 后台、subagent），`job_*` tool 读 / 等 / 杀                        | 进程内；归属某个 agent，agent 销毁就取消               |
+| `goal`     | 同会话持久目标，`active / paused / blocked / complete`，按轮次续跑                            | 是状态不是调度器；不开新会话                           |
+
+用本文的两个词：D 有**投工**（webhook 就是投工，只是不落任务行，直接开 session），没有**认领**——没有任务行、没有租约、没有重试、没有跨进程。
+
+### 硬规则
+
+1. 一切都是插件，包括 loop。新行为挂在文档化的扩展点上；改 loop 要同步改 `architecture.md`。
+2. 注册即副作用：所有贡献走 `ctx.effect()` / `ctx.on()`，插件卸载自动回收。
+3. 扩展只依赖 Service Definition，不依赖具体 provider。`agent-loop` 是 provider，可换。
+4. 模型可见 ⟺ 已记录。
+5. 插件里不许硬编码可调参数；部署会变的都是 `Config` 字段，可从 `cordis.yml` 改。
+6. 每个非平凡改动一篇决策记录；每包 README 固定章节；生成文档有新鲜度门禁。
+7. 预发布期不留兼容层：`SESSION_FORMAT_VERSION = 0`，后端拒读旧格式。
+
+### D 的盲区
+
+**代价是框架。** 249 个包，每包 README / invariant / 门禁，一切经 Cordis 容器；不带 Cordis 就用不了任何一块。「换一行配置换掉 loop」服务的是要在自己产品里深度改装的人，不是要嵌一个 loop 的人。
+
+**和 C 一样没有认领。** webhook 是 fire-and-forget，schedule 只在活会话里，jobs 是进程内。
+
+### C 与 D 的关系
+
+D 的 `llm/llm-pi-ai` 直接依赖 pi 的 `@earendil-works/pi-ai`：C 的 `ai` 层被另一个 harness 拿去当供应商适配器。「`ai` 不知道 agent 存在」这条边界确实能独立复用，本仓的 `ai` 包照此切。
+
+---
+
 ## 对照
 
-|          | A 队列服务            | B 外挂聊天框                 | C 分层库                             |
-| -------- | --------------------- | ---------------------------- | ------------------------------------ |
-| 产品中心 | run / 任务            | 联系人 / 订单表单            | 包与会话                             |
-| 智能形态 | 常驻进程              | HTTP 请求内                  | 可嵌入的库                           |
-| 部署单元 | `apps/agent`          | 单体                         | 带 `bin` 的包 + 可选 server          |
-| 接缝     | HTTP + 队列表         | 函数调用                     | 帧协议（CBOR）                       |
-| 关客户端 | 队列继续              | 停止                         | server 侧 session 继续，可重连       |
-| 无人值守 | 有（`claimDue`）      | 无                           | 无                                   |
-| 状态     | task / run / event    | `messages[]`                 | append-only entry 树                 |
-| 可插点   | 工具                  | 无                           | 传输 / 后端 / 扩展，各带 conformance |
-| 质量     | evals 门禁            | 无                           | evals + conformance                  |
-| 目录信号 | `dispatch` `claimDue` | `chat-widget` `chat.service` | `protocol` `transports` `conformance` |
-| 典型结局 | 垂直 agent 服务       | 侧栏问答，写库不可靠         | 被别人嵌进产品                       |
+|          | A 队列服务            | B 外挂聊天框                 | C 分层库                             | D 全插件 harness                                         |
+| -------- | --------------------- | ---------------------------- | ------------------------------------ | -------------------------------------------------------- |
+| 产品中心 | run / 任务            | 联系人 / 订单表单            | 包与会话                             | profile（一份配置）                                      |
+| 智能形态 | 常驻进程              | HTTP 请求内                  | 可嵌入的库                           | 插件树里的一个可换插件                                   |
+| 部署单元 | `apps/agent`          | 单体                         | 带 `bin` 的包 + 可选 server          | 单 bin `dsh --profile <name>`                            |
+| 接缝     | HTTP + 队列表         | 函数调用                     | 帧协议（CBOR）                       | 进程内 `ctx.<seam>` + 三域事件；对外 JSON-RPC / ACP      |
+| 关客户端 | 队列继续              | 停止                         | server 侧 session 继续，可重连       | web：本机 server 活着就继续；sdk / acp：stdio 断开即停   |
+| 无人值守 | 有（`claimDue`）      | 无                           | 无                                   | 半个：webhook 投工、schedule 会话内定时；无认领          |
+| 状态     | task / run / event    | `messages[]`                 | append-only entry 树                 | append-only 事件 log；模型可见 ⟺ 已记录                  |
+| 可插点   | 工具                  | 无                           | 传输 / 后端 / 扩展，各带 conformance | 一切；seam 三角色 + 运行时 invariant                     |
+| 质量     | evals 门禁            | 无                           | evals + conformance                  | 录制回放 snapshots + 100% 覆盖 + 生成文档门禁            |
+| 目录信号 | `dispatch` `claimDue` | `chat-widget` `chat.service` | `protocol` `transports` `conformance` | `cordis.patch.yml` `bundle/` `<seam>/` + `-local` + `tool-` |
+| 典型结局 | 垂直 agent 服务       | 侧栏问答，写库不可靠         | 被别人嵌进产品                       | 被别人当平台改装                                         |
 
-A 和 C 的缺口正好互补：A 有队列没有可嵌入的库，C 有可嵌入的库没有队列。
+缺口互补：A 有队列没有可嵌入的运行时；C、D 有可嵌入 / 可改装的运行时，没有队列。D 比 C 多走了半步（webhook 投工），停在认领之前。
 
 ---
 
 ## 本仓骨架
 
 **C 的分层做骨，A 的队列作为其中一层库。** 不建 `examples/`，不建 B 的 `chat-widget` / `modules/chat`。
+
+从 D 借两条规则，不借框架：
+
+- **可插点 = 三角色。** `session-backends/*`、`server` 的 transport、telemetry 都按「契约包 / 实现包 / 消费者」摆，conformance 挂在契约包。少一角就不算可插点，只是内部实现。
+- **模型可见 ⟺ 已记录。** 进 loop 请求的任何东西都必须能从 entries 重建；`core` 里加一种模型可见输入 = 加一种 entry 类型。
+
+不借 Cordis：骨架十来个包，固定分层比容器便宜。本仓要的是「任务行 + 租约」；D 有 249 个插件仍停在认领之前，说明这一层要专门做，插件框架不会替你做。
 
 骨架不选方向。它回答「包怎么切、边界在哪」；「哪些包是产品、`tools/` 装什么、evals 测什么、P0 先做哪半」由方向回答，见后面 V / G 两节。
 
@@ -368,9 +506,9 @@ agent/
 1. `packages/queue` 不 import `core`。它只认任务行和租约，不知道认领之后要干什么；接线在 `app/src/dispatcher.ts`。
 2. 认领任务后必须开 session。不存在「只写日志不建会话」的后台执行。
 3. 任何 HTTP 入口都是薄壳：只写任务行、只读 entries。loop 不跑在请求里——这是 B 的错。
-4. 契约包依赖数趋零；每个可插点（backend / transport / telemetry）配 conformance。
+4. 契约包依赖数趋零；每个可插点（backend / transport / telemetry）契约 / 实现 / 消费者三角色齐全，conformance 挂在契约包。
 5. `server` 不含业务；鉴权在 listener 里完成，进 server 的连接已经可信。
-6. session append-only。压缩和分支是加节点，不是删历史。
+6. session append-only。压缩和分支是加节点，不是删历史。模型可见 ⟺ 已记录：进 loop 请求的都能从 entries 重建。
 7. 缺能力只减菜单，不抛错。工具报告观测来源，不报告 confidence。
 8. 无 `examples/`：验证靠 test / eval。
 
@@ -380,7 +518,7 @@ agent/
 
 ## 方向 V — 垂直细分领域 Agent
 
-参考系：A 的两个仓库（crm、simie）就是这个方向。命题：**产品是「某个领域里没人看着也在干活的服务」。** 买的人是业务方，投工的是别的系统和定时器，人偶尔进来看和介入。
+参考系：A 的两个仓库（crm、simie）就是这个方向。D 的 `webhook-github` 是同一命题的无队列版——外部事件直接开 session，不落任务行；本方向要落。命题：**产品是「某个领域里没人看着也在干活的服务」。** 买的人是业务方，投工的是别的系统和定时器，人偶尔进来看和介入。
 
 ### 形态
 
@@ -477,14 +615,14 @@ GET  /health
 
 ## 方向 G — 通用 Agent
 
-参考系：C 的 pi 就是这个方向。命题：**产品是「可嵌入、可远程、可扩展的 agent 运行时」。** 买的人是开发者，把它嵌进自己的产品或直接用 CLI。相对 pi 的差异只有一处：把 A 的队列做进 harness，pi 没有无人值守。
+参考系：C 的 pi 和 D 的 dsh 都是这个方向。命题：**产品是「可嵌入、可远程、可扩展的 agent 运行时」。** 买的人是开发者，把它嵌进自己的产品或直接用 CLI。相对 pi / dsh 的差异只有一处：把 A 的队列做进 harness。pi 没有投工也没有认领；dsh 有投工（webhook）没有认领。
 
 ### 形态
 
 ```text
 开发者   → CLI（app）→ core → 本机 session
 开发者   → client ←帧协议→ server → core → server 侧 session（可断、可重连）
-别的系统 → POST /v1/tasks → 任务表 ←claimDue← dispatcher → 同一种 session      ← pi 没有的那一层
+别的系统 → POST /v1/tasks → 任务表 ←claimDue← dispatcher → 同一种 session      ← pi 没有、dsh 只有前半的那一层
 ```
 
 护城河在契约的稳定性：protocol、extension-api、session 格式。别人嵌了你就不能随便改。
@@ -506,7 +644,7 @@ agent/
 │   │       ├── compaction/         # 上下文压缩 + 分支摘要
 │   │       └── session/            # entry 树 + conformance
 │   │
-│   ├── extension-api/              # ★ 契约：第三方 tool / skill / hook 的接口 + conformance
+│   ├── extension-api/              # ★ 契约：第三方 tool / skill / hook 的接口 + conformance（对应 dsh 的 Service Definition 包）
 │   ├── protocol/                   # ★ 帧 + schema；加字段走版本
 │   ├── client/                     # ★ 运行时中立；root 无 node import
 │   ├── server/                     # ★ transports/unix/ 起步；testing/
@@ -528,7 +666,7 @@ agent/
 └── docs/
     ├── embedding.md                # 给嵌入者：怎么起 server、怎么接 client
     ├── protocol.md                 # 帧格式、版本策略
-    └── why-not-pi.md               # 写不出来就停
+    └── why-not-pi.md               # 对 pi 和 dsh 都要能答；写不出来就停
 ```
 
 ### 层 → 目录
@@ -552,7 +690,7 @@ agent/
 3. 兼容性是产品：protocol 加字段走版本号；entry 格式只增不改；破坏性变更走 major。
 4. `queue` 是可选依赖。不装 queue 的宿主拿到的是完整产品，不是残缺版。
 5. `app` 是唯一的参考实现。不建第二个 example，不建 demo 仓。
-6. `docs/why-not-pi.md` 必须存在且能说服一个正在用 pi 的人。写不出来，方向不成立。
+6. `docs/why-not-pi.md` 必须存在且能说服一个正在用 pi 或 dsh 的人。写不出来，方向不成立。
 
 ### 产品完成线
 
@@ -577,7 +715,7 @@ CLI 四种 mode：
 ```text
 agent                       interactive：TUI
 agent -p "…"                print：跑一轮，stdout 出结果
-agent --rpc                 JSONL over stdio：给别人的产品嵌
+agent --rpc                 JSONL over stdio：给别人的产品嵌（对应 pi rpc mode / dsh sdk profile）
 agent --serve unix:…        起 server；装了 queue 则同时起 dispatcher
 ```
 
@@ -585,7 +723,7 @@ agent --serve unix:…        起 server；装了 queue 则同时起 dispatcher
 
 ### G 的失败模式
 
-- **做成更差的 pi。** 唯一的差异是 queue；先问「pi + 一个扩展 + 一个 cron」能不能做到。
+- **做成更差的 pi / dsh。** 唯一的差异是 queue；先问「pi + 一个扩展 + 一个 cron」能不能做到，再问「dsh + webhook + schedule」为什么不够。第二个问题的答案只能是认领——租约、重试、跨进程——不能是别的。
 - **没有客户。** 通用运行时卖给开发者靠生态，生态靠契约稳定；契约变一次，扩展死一批。
 - **「无 `examples/`」承压。** 想建 demo 的冲动说明 `app` 没做好参考实现的角色。
 
@@ -607,9 +745,9 @@ agent --serve unix:…        起 server；装了 queue 则同时起 dispatcher
 | evals 测什么                 | 领域结果：写对了没有            | 通用基准 + 契约 conformance                                 |
 | 领域住哪                     | `<domain>` `integrations`       | 不存在；走 extension                                        |
 | 护城河                       | 任务类型 + 领域 eval            | 契约稳定性 + 生态                                           |
-| 直接对手                     | 同领域的 B 型产品               | pi / Claude Code / Codex CLI                                |
-| 典型失败                     | 长成 B                          | 更差的 pi                                                   |
-| 参考系                       | A（crm、simie）                 | C（pi）                                                     |
+| 直接对手                     | 同领域的 B 型产品               | pi / dsh / Claude Code / Codex CLI                          |
+| 典型失败                     | 长成 B                          | 更差的 pi / dsh                                             |
+| 参考系                       | A（crm、simie）                 | C（pi）、D（dsh）                                           |
 
 两个方向共用骨架，`core` 在两边都无领域。差别是 `<domain>` 包存在不存在、`server` 是 P0 还是 P3。不选就是两头都做：通用骨架永远没有客户，垂直产品永远不干净。
 
