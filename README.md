@@ -5,14 +5,14 @@
 | 类型         | 命题                                   | 买家             | 参考系                                                                                                    |
 | ------------ | -------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------- |
 | **垂直类**   | 某个领域里没人看着也在干活的服务       | 业务方           | [crm](https://github.com/trycompai/crm)、[simie](https://github.com/simieco/simie)                        |
-| **通用类**   | 可嵌入、可远程、可扩展的 agent 运行时  | 开发者           | [pi](https://github.com/earendil-works/pi)、[dsh](https://github.com/deepseek-ai/deepseek-harness)        |
+| **通用类**   | 可嵌入、可远程、可扩展的 agent 运行时  | 开发者           | [dsh](https://github.com/deepseek-ai/deepseek-harness)                                                    |
 | **助手类**   | 已有产品角落里的聊天框                 | 已有产品的用户   | 多数「AI CRM / AI 后台」                                                                                  |
 | **工作流类** | 人画好的图，LLM 只在节点里填空         | 流程负责人       | Dify、n8n、LangGraph                                                                                      |
 | **多 Agent** | 编排者拆活，多个角色协作出一份产物     | 研究 / 生成类需求 | deep research、dsh `subagent/`、Claude Code subagent                                                      |
 
-类型由三个问题定：**谁驱动**（人 / 别的系统 / 定时）、**智能住哪**（独立进程 / 库 / 业务进程 / 节点 / 多个）、**关掉页面还干不干活**。五类不是好坏排序，是五种不同的产品；目录长得不一样，所以分开写。工作流和多 Agent 也常作为前三类**内部**的组织方式，这里单列是因为它们自成产品时目录自成一套。
+类型由三个问题定：**谁驱动**（人 / 别的系统 / 定时）、**智能住哪**（独立进程 / 库 / 业务进程 / 节点 / 多个）、**关掉页面还干不干活**。五类不是好坏排序，是五种不同的产品；各类的「目录」小节是类型视角的骨架，所以分开写。落地时五类共用一套分层，各类型是不同组合，见 [docs/architecture.md](docs/architecture.md)。工作流和多 Agent 也常作为前三类**内部**的组织方式，这里单列是因为它们自成产品时组合自成一套。
 
-pi、dsh 的目录可以对照 [pi](https://github.com/earendil-works/pi)、[dsh](https://github.com/deepseek-ai/deepseek-harness) 仓库逐行核对。其余参考系是归纳出来的骨架。
+dsh 的目录可以对照 [dsh](https://github.com/deepseek-ai/deepseek-harness) 仓库逐行核对；本仓的包路径与 dsh 同名，对照表见 [docs/dsh-map.md](docs/dsh-map.md)。其余参考系是归纳出来的骨架。
 
 类型由产品定，不由本仓预选。怎么拿需求文档判型见文末；已判型的产品一产品一篇，在 `products/`。
 
@@ -20,7 +20,7 @@ pi、dsh 的目录可以对照 [pi](https://github.com/earendil-works/pi)、[dsh
 
 ## 怎么读
 
-每一类固定几节：命题与参考系、产品简笔画、流程图、目录、层 → 目录、硬规则、失败模式；垂直类、通用类、助手类多一节完成线。看完五类看「对照」，最后看「按产品判型」。
+每一类固定几节：命题与参考系、产品简笔画、流程图、目录、层 → 目录、硬规则、失败模式；垂直类、通用类、助手类多一节完成线。看完五类看「对照」与「产品形态」，最后看「按产品判型」。各类「目录」里的 `telemetry`、`ai`、`core`、`session-backends` 等是简写，落地路径见 [docs/architecture.md](docs/architecture.md) 末尾的对照表。
 
 两张图各答一个问题：
 
@@ -212,14 +212,14 @@ GET  /health
 
 **命题：产品是「可嵌入、可远程、可扩展的 agent 运行时」。** 买的人是开发者，把它嵌进自己的产品或直接用 CLI。护城河在契约的稳定性：protocol、extension-api、session 格式。别人嵌了你就不能随便改。
 
-参考系有两种做法，同一个类型：
+参考系是 dsh。本仓借它的服务划分、规则和包路径，不借它的容器：
 
-|            | pi — 分层库                                     | dsh — 全插件                                     |
-| ---------- | ----------------------------------------------- | ------------------------------------------------ |
-| 产品是什么 | 带 `bin` 的包                                   | 一份叠加出来的配置（profile）                    |
-| 智能形态   | `agent` 包是库；进程形态由 `server` / `client` 决定 | `agent-loop` 是插件树上一个可换插件            |
-| 可插点     | 传输 / 后端 / 扩展，各带 conformance            | 一切；每个 seam 三角色 + 运行时 invariant        |
-| 代价       | 固定分层，换 loop 要改代码                      | 249 个包、Cordis 容器；不带框架用不了任何一块    |
+|            | dsh — 全插件                                     | 本仓 — 不带容器                                        |
+| ---------- | ------------------------------------------------ | ------------------------------------------------------ |
+| 产品是什么 | 一份叠加出来的配置（profile）                    | 一个组合函数（`bundle/*` + 产品仓 `compose/`）         |
+| 智能形态   | `agent-loop` 是插件树上一个可换插件；只经 `dsh --profile` 启动 | `core/*` 是普通库；进程形态由宿主决定，可跑在业务请求里 |
+| 可插点     | 一切；每个 seam 三角色 + 运行时 invariant        | 能力三角色 + 循环上一张封闭的拦截点清单                |
+| 代价       | 249 个包、Cordis 容器；不带框架用不了任何一块    | 换 loop 要改代码；组合不能靠配置热替换                 |
 
 ### 产品简笔画
 
@@ -280,43 +280,6 @@ GET  /health
 
 ### 参考仓怎么摆
 
-**pi** — 没有 `apps/`，全是 `packages/*`，产品只是带 `bin` 的包。build 顺序就是依赖顺序：
-
-```text
-telemetry → tui → ai → agent → session-backends → protocol → client → server → coding-agent
-```
-
-```text
-pi/packages/
-├── telemetry/                  # 零依赖。契约 + testing/conformance.ts
-├── tui/                        # 差分渲染终端 UI；与 agent 无关
-├── ai/                         # 供应商统一 API；模型目录生成
-├── agent/                      # ★ 运行时（库）
-│   └── src/
-│       ├── agent-loop.ts
-│       └── harness/
-│           ├── tools/          # bash / edit / read / write / image 各一文件
-│           ├── skills.ts  system-prompt.ts
-│           ├── compaction/     # 上下文压缩 + 分支摘要
-│           └── session/        # entry 树、jsonl/、testing/conformance.ts
-├── protocol/                   # CBOR + 长度前缀分帧 + schema；只依赖校验库
-├── client/                     # 远程会话客户端；root 无 node import
-├── server/                     # 会话服务器；listener、transports/unix/、testing/
-├── session-backends/sqlite-node/
-├── coding-agent/               # 产品 CLI（bin）
-│   └── src/
-│       ├── core/               # 装配：session、模型、设置、扩展
-│       ├── modes/              # interactive（TUI）/ print / rpc（JSONL over stdio）
-│       └── client/  server/  extensions/
-└── evals/                      # *.eval.ts + vitest-evals
-```
-
-pi 的三个关键设计：
-
-- **session 是 append-only 的 entry 树。** entry id 稳定，能当游标：`get_entries --since <id>` 跨重启续读。压缩、fork、clone 都是往树上加节点，不删历史。
-- **「关客户端还能跑」靠租约，不靠队列。** session 活在 server 侧，client `detach` 后服务端不停，另一个 client `attach` 回来靠 snapshot 对齐。exclusive / shared 两种租约防并发写。这解决的是「多端接同一个会话」，**不是**「没人看着时自己找活干」。
-- **领域对象和线上 DTO 互不认识。** `ai` 的类型和 `protocol` 的 DTO 是两套，转换职责显式归 `server` 包，用编译期字段清单强制「`ai` 加字段必须过一次 review」。
-
 **dsh** — 没有特权 core。模型适配器、tool 注册表、session log、agent loop 本身都是 [Cordis](https://github.com/cordiverse/cordis) 插件。产品是 profile：`dsh --profile web --dump-config` 打印出来的每一行都能被上一层 patch 替换。
 
 ```text
@@ -325,7 +288,7 @@ deepseek-harness/
 ├── packages/<group>/<pkg>/
 │   ├── core/                       # 脊柱：session / system-prompt / tools / agent / agent-loop
 │   │   └── agent-loop/             #   默认 loop 驱动（ctx.agentLoop）；扩展不许依赖它
-│   ├── llm/                        # ctx.llm 契约 + llm-deepseek / llm-pi-ai（← 依赖 pi 的 ai 包）
+│   ├── llm/                        # ctx.llm 契约 + llm-deepseek 等适配器
 │   ├── session/  session-query/    # 持久化契约 + jsonl 后端；读侧 sqlite 全文索引
 │   ├── shell/                      # 每个能力三件套：
 │   │   ├── shell/                  #   Service Definition（抽象类，ctx.shell）
@@ -349,11 +312,17 @@ dsh 的三个关键设计：
 
 dsh 怎么答「没人看着」：`webhook` 验签后直接开 session（是投工，但不落任务行，无重试无去重）；`schedule` 只在活会话里；`jobs` 进程内；`goal` 是状态不是调度器。**有投工，没认领。**
 
-dsh 的 `llm-pi-ai` 直接依赖 pi 的 `ai` 包：「`ai` 不知道 agent 存在」这条边界确实能独立复用，本文的 `ai` 包照此切。
+dsh 的 `llm/llm` 只定义适配器，agent loop 和压缩都只调用与供应商无关的流式服务：「`ai` 不知道 agent 存在」这条边界在 dsh 里成立，本文的 `ai` 包照此切。
+
+本类沿用的会话设计，在 dsh 里各有对应（详见 [docs/dsh-map.md](docs/dsh-map.md)「通用类用到的会话概念」）：
+
+- **session 只追加。** dsh 每条会话事件带单调递增的 `seq`，能当游标跨重启续读；压缩以替换事件记入日志，fork 在 turn 边界新建会话并记下父会话，都不删历史。
+- **「关客户端还能跑」靠会话保存在服务端，不靠队列。** dsh 的持久化句柄是单写者，跨进程有写 lease；重连靠 projection 的 `snapshot()` 对齐。这解决的是「多端接同一个会话」，**不是**「没人看着时自己找活干」。shared 租约 dsh 没有，是本仓设计。
+- **领域对象和线上 DTO 互不认识。** `ai` 的类型和 `protocol` 的 DTO 是两套，转换职责显式归 `server` 包，用编译期字段清单强制「`ai` 加字段必须过一次 review」。这条是本仓规则。
 
 ### 目录
 
-取 pi 的分层，不取 dsh 的容器：十来个包，固定分层比容器便宜。从 dsh 借两条规则——三角色、模型可见 ⟺ 已记录——不借框架。相对 pi / dsh 只多一处：把队列做成可选层。
+取 dsh 的服务划分和规则，不取 Cordis 容器：固定分层、构造注入，比容器便宜。下面是类型视角的简写，落地路径见 [docs/architecture.md](docs/architecture.md)。相对 dsh 只多一处：把队列做成可选层。
 
 ```text
 agent/
@@ -380,7 +349,7 @@ agent/
 │   │
 │   ├── queue/                      # 可选层。不装也能完整用 core + server + client
 │   │
-│   ├── app/                        # 参考 CLI（bin）。对应 pi/coding-agent；也是唯一的「example」
+│   ├── app/                        # 参考 CLI（bin）。对应 dsh apps/cli + bundle/*；也是唯一的「example」
 │   │   └── src/
 │   │       ├── modes/              # interactive（TUI）/ print / rpc（JSONL over stdio）/ serve
 │   │       ├── extensions/         # 加载第三方扩展
@@ -392,7 +361,7 @@ agent/
 └── docs/
     ├── embedding.md                # 给嵌入者：怎么起 server、怎么接 client
     ├── protocol.md                 # 帧格式、版本策略
-    └── why-not-pi.md               # 对 pi 和 dsh 都要能答；写不出来就停
+    └── why-not-dsh.md              # 要能说服正在用 dsh 的人；写不出来就停
 ```
 
 ### 层 → 目录
@@ -420,7 +389,7 @@ agent/
 7. 兼容性是产品：protocol 加字段走版本号；entry 格式只增不改；破坏性变更走 major。
 8. `queue` 是可选依赖。不装 queue 的宿主拿到的是完整产品，不是残缺版。
 9. `app` 是唯一的参考实现。不建第二个 example，不建 demo 仓。
-10. `docs/why-not-pi.md` 必须存在且能说服一个正在用 pi 或 dsh 的人。写不出来，方向不成立。
+10. `docs/why-not-dsh.md` 必须存在且能说服一个正在用 dsh 的人。写不出来，方向不成立。
 
 ### 完成线
 
@@ -445,7 +414,7 @@ CLI 四种 mode：
 ```text
 agent                       interactive：TUI
 agent -p "…"                print：跑一轮，stdout 出结果
-agent --rpc                 JSONL over stdio：给别人的产品嵌（对应 pi rpc mode / dsh sdk profile）
+agent --rpc                 JSONL over stdio：给别人的产品嵌（对应 dsh sdk profile）
 agent --serve unix:…        起 server；装了 queue 则同时起 dispatcher
 ```
 
@@ -453,8 +422,8 @@ agent --serve unix:…        起 server；装了 queue 则同时起 dispatcher
 
 ### 失败模式
 
-- **做成更差的 pi / dsh。** 唯一的差异是 queue；先问「pi + 一个扩展 + 一个 cron」能不能做到，再问「dsh + webhook + schedule」为什么不够。第二个问题的答案只能是认领——租约、重试、跨进程——不能是别的。
-- **没有客户。** 通用运行时卖给开发者靠生态，生态靠契约稳定；契约变一次，扩展死一批。本仓今天的 `why-not-pi.md` 答案就是这一条：没有开发者客户，不做通用运行时；`core` 只作各产品共用的库（见「跨类型不变的部分」）；要编码 Agent 就用 Claude Code / Cursor / pi，不自研。出现开发者客户或第二宿主再回来建 `protocol` / `server` / `client` / `extension-api`。
+- **做成更差的 dsh。** 唯一的差异是 queue；先问「dsh + 一个插件 + webhook + schedule」为什么不够。答案只能是认领——租约、重试、跨进程——不能是别的。
+- **没有客户。** 通用运行时卖给开发者靠生态，生态靠契约稳定；契约变一次，扩展死一批。本仓今天的 `why-not-dsh.md` 答案就是这一条：没有开发者客户，不做通用运行时；`core` 只作各产品共用的库（见「跨类型不变的部分」与 [docs/architecture.md](docs/architecture.md)）；要编码 Agent 就用 Claude Code / Cursor / dsh，不自研。出现开发者客户或第二宿主再回来建 `protocol` / `server` / `client` / `extension-api`。
 - **「无 `examples/`」承压。** 想建 demo 的冲动说明 `app` 没做好参考实现的角色。
 
 ---
@@ -873,8 +842,39 @@ multi-agent/
 | 可插点      | 任务类型、integration           | 传输 / 后端 / 扩展，各带 conformance      | 无                           | 节点类型                          | 角色                              |
 | 质量        | 领域结果 eval                   | 契约 conformance + 通用基准               | 无                           | fixtures 回放                     | 角色 eval + 产物 eval             |
 | 目录信号    | `queue/` `<domain>/tasks/` `dispatcher` | `protocol/` `server/` `extension-api/` `conformance` | `chat-widget` `chat.service` | `workflows/*/graph.yaml` `checkpoint` | `roles/` `orchestrator/` `blackboard/` |
-| 参考系      | crm、simie                      | pi、dsh                                   | 多数 AI CRM                  | Dify、n8n、LangGraph              | deep research、MetaGPT            |
-| 典型失败    | 长成助手类                      | 更差的 pi / dsh                           | 想无人值守                   | 分支爆炸                          | 为了多而多                        |
+| 参考系      | crm、simie                      | dsh                                       | 多数 AI CRM                  | Dify、n8n、LangGraph              | deep research、MetaGPT            |
+| 典型失败    | 长成助手类                      | 更差的 dsh                                | 想无人值守                   | 分支爆炸                          | 为了多而多                        |
+
+---
+
+## 产品形态
+
+形态答「人从哪里碰到 Agent」，类型答「骨架长什么样」，两者正交：同一类型可以开多个入口，同一个入口也能装不同类型。判型仍走三问，形态不参与判型；「常见类型」一列只是市面上的常见落点。
+
+| #   | 形态                         | 典型产品                                                              | 特点                                         | 常见类型          |
+| --- | ---------------------------- | --------------------------------------------------------------------- | -------------------------------------------- | ----------------- |
+| 1   | 嵌入型（挂件 / SDK）         | Intercom Fin、客服气泡、Chatbot SDK                                   | 宿主给上下文，Agent 是附属能力               | 助手类、通用类    |
+| 2   | CLI / TUI                    | Claude Code、Codex CLI、Gemini CLI、Aider                             | 面向开发者，可脚本化，贴近文件系统与 shell   | 通用类            |
+| 3   | Web 对话                     | ChatGPT、Claude.ai、Kimi、Manus                                       | 门槛最低、通用，常带云端沙箱                 | 通用类、多 Agent  |
+| 4   | 字段 / 组件级内嵌            | Erupt AI、Notion AI 内联、Salesforce Einstein                         | 入口挂在单个输入框或编辑器上，结果回填字段   | 助手类            |
+| 5   | 应用内侧边栏 Copilot         | Microsoft 365 Copilot、Gemini in Workspace、Notion AI 面板            | 感知整个文档 / 页面，粒度比 4 粗             | 助手类            |
+| 6   | IDE 插件 / AI 原生 IDE       | Cursor、GitHub Copilot、Windsurf、Cline、通义灵码                     | 代码上下文最强；补全、对话、agent 三档       | 通用类            |
+| 7   | 桌面客户端 / Computer Use    | Claude Desktop、ChatGPT 桌面版、Anthropic Computer Use                | 能操作本地应用与屏幕                         | 通用类            |
+| 8   | 浏览器 Agent / 扩展          | OpenAI Atlas / Operator、Perplexity Comet、Dia、Monica                | 以网页为操作对象，代人点击、填表             | 通用类            |
+| 9   | IM / 协作平台 Bot            | 飞书 / 钉钉 / 企业微信 / Slack Bot、Devin in Slack                    | 在团队已有渠道里 @ 调用，天然多人            | 助手类、垂直类    |
+| 10  | 后台异步 / 云端 Agent        | Devin、Codex Cloud、Cursor Background Agent、Copilot Coding Agent     | issue / 任务触发，用户不在线，交付 PR 或报告 | 垂直类、通用类    |
+| 11  | 低代码编排 / Agent 搭建平台  | Dify、Coze、n8n、Zapier Agents                                        | 用户自己拼流程，产物是一个 Agent             | 工作流类          |
+| 12  | 无界面 API / SDK / 协议      | OpenAI Agents SDK、Claude Agent SDK、MCP、A2A、ACP                    | 给开发者集成，是其他形态的底座               | 通用类            |
+| 13  | 数字员工 / Agentic RPA       | UiPath、实在智能、各后台的「AI 员工」                                 | 按岗位包装，长期跑固定流程                   | 垂直类、工作流类  |
+| 14  | 语音 / 实时                  | ChatGPT 语音、外呼与电话客服 Agent                                    | 低延迟、可打断                               | 助手类、垂直类    |
+| 15  | 移动端 / OS 级 / 硬件        | Apple Intelligence、豆包手机助手、荣耀 YOYO、AI 眼镜                  | 跨应用调度系统能力，端云协同                 | 助手类、通用类    |
+
+形态之外再看两个维度：
+
+- **自主程度**：补全 → Copilot（人主导，AI 建议）→ Agent（AI 主导，人审批）→ Autopilot（全异步，只交付结果）。4 在最左，10 在最右。
+- **同步 / 异步**：1–8 是人在场的实时交互；10、13 是投工后走开，对应本文的投工 / 认领。
+
+同一个内核开多个入口是常态：Claude Code 有 CLI、IDE、Web、Slack、SDK 五个入口；Cursor 有 IDE、CLI、后台 Agent、Slack。dsh 覆盖 2、3、7、8、12（`dsh` CLI、Web、Desktop、`computer-use` / `browser-use`、SDK / ACP / MCP）。入口多不改类型：加一个入口是在 [docs/architecture.md](docs/architecture.md) 第 4 层加一个渠道适配器，或接一个 `sdk/*` 客户端，不在 `core` 里分叉。每种形态要填哪些位置见 [docs/forms.md](docs/forms.md)。
 
 ---
 
@@ -885,17 +885,17 @@ multi-agent/
 ### 判型流程
 
 1. 拿需求文档答三个问题：谁驱动、智能住哪、关掉页面还干不干活。文档答不出来的，回去问业务方，不替它猜。
-2. 三问落到一类，就取那一类的目录、硬规则、完成线。不混两类的目录。
+2. 三问落到一类，就取那一类的组合（[docs/architecture.md](docs/architecture.md)「五类各是哪种组合」）、硬规则、完成线。另一类的编排或触发，等它的换型信号出现再加。
 3. 写第一条 eval。写不出来，说明需求还没到能开工的程度。
 4. 每一类「失败模式」里的换型信号出现时换型。换型由产品需求触发，不由仓的偏好触发。
 
 ### 跨类型不变的部分
 
-`telemetry` / `ai` / `core` / `session-backends` 四个包五类一样：`core` 无领域、tools 只有通用件、session append-only。先起这四个不算押注。**`queue` 不在共用里**——助手类、工作流类没有它；上一版把它列进共用五包，就是预选了型的痕迹。
+`telemetry` / `ai` / `core` / `session-backends` 四个包五类一样：`core` 无领域、tools 只有通用件、session append-only。先起这四个不算押注。它们加上 preset 就是 [docs/architecture.md](docs/architecture.md) 的第 0、1 层，落地路径与 P0 建哪些包见该篇。**`queue` 不在共用里**——助手类、工作流类没有它；上一版把它列进共用五包，就是预选了型的痕迹。
 
 类型专属的包等产品到了再建：`queue` / `dispatcher` / `<domain>`（垂直）；`protocol` / `server` / `client` / `extension-api`（通用）；`chat` 模块或独立部署的 `app`（助手）；`graph` / `runner`（工作流）；`roles` / `orchestrator` / `blackboard`（多 Agent）。
 
-跨类型的规则：可插点三角色（契约 / 实现 / 消费者，conformance 挂契约包，少一角就只是内部实现）；模型可见 ⟺ 已记录；HTTP 是薄壳；无 `examples/`，验证靠 test / eval。
+跨类型的规则：可插点三角色（契约 / 实现 / 消费者，conformance 挂契约包，少一角就只是内部实现）；模型可见 ⟺ 已记录；HTTP 是薄壳；无 `examples/`，验证靠 test / eval。分层之间的七条不变量与依赖方向见 [docs/architecture.md](docs/architecture.md)。
 
 `core` 作为被多个产品依赖的库，五类共守（借 Claude Code「框架最薄、复杂度交给模型」的取向，落成生产约束）：
 
@@ -931,13 +931,13 @@ HITL 不是新功能：人 attach 到调度开的 session 上就能介入，这�
 |                              | 垂直类                          | 通用类                                                      |
 | ---------------------------- | ------------------------------- | ----------------------------------------------------------- |
 | 产品                         | `app` + `<domain>`              | `core` + `protocol` + `server` + `client` + `extension-api` |
-| `queue`                      | 脊柱                            | 可选层、相对 pi / dsh 的唯一差异点                          |
+| `queue`                      | 脊柱                            | 可选层、相对 dsh 的唯一差异点                               |
 | `tools/`                     | 领域动作，副作用声明必填        | 通用五件                                                    |
 | `skills/`                    | 领域 SOP                        | 通用；领域的走 extension                                    |
 | HITL                         | `web` 看 entries + HTTP input   | attach / 会话租约                                           |
 | `server` `client` `protocol` | P3                              | P0                                                          |
 | 护城河                       | 任务类型 + 领域 eval            | 契约稳定性 + 生态                                           |
-| 直接对手                     | 同领域的助手类产品              | pi / dsh / Claude Code / Codex CLI                          |
+| 直接对手                     | 同领域的助手类产品              | dsh / Claude Code / Codex CLI                               |
 
 ### 已判型的产品
 

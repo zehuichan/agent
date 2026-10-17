@@ -84,7 +84,7 @@
 
 取：
 
-- `telemetry` / `ai` / `core` / `session-backends` 四个共用包不变；`ai` 在业务仓里就是能力平台的 SDK。
+- `telemetry` / `ai` / `core` / `session-backends` 四个共用包不变；`ai` 在业务仓里就是能力平台的 SDK。落地路径见 `../docs/architecture.md`：`ai` 是 `llm/llm` + `llm/llm-ai-platform`；各产品用到哪几层，见该篇「只建有产品在用的位置」。
 - 垂直类的 `queue` + `dispatcher` + `<domain>/tasks`（切片）；助手类的请求内 loop + 领域 service / integrations（客服、履约管家、销售助手）；工作流类的 `graph` / `runner` / `workflows/*`（内容）。
 - 「任务行才是消息」「认领必开 session」「模型可见 ⟺ 已记录」「图是数据」——全部照 `../README.md`。
 
